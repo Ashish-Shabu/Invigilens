@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvigiLens | Review Alerts</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">Invigi<span>Lens</span></div>
+
+        <div class="nav-links">
+            <a href="index.html">
+                <ion-icon name="videocam-outline" style="margin-right: 10px;"></ion-icon> Live Monitor
+            </a>
+            <a href="alerts.html" class="active">
+                <ion-icon name="alert-circle-outline" style="margin-right: 10px;"></ion-icon> Alert Review
+            </a>
+            <a href="#">
+                <ion-icon name="people-outline" style="margin-right: 10px;"></ion-icon> Students
+            </a>
+            <a href="#">
+                <ion-icon name="settings-outline" style="margin-right: 10px;"></ion-icon> Settings
+            </a>
+        </div>
+
+        <div style="margin-top: auto; color: var(--text-secondary); font-size: 0.8rem;">
+            System v1.0 <br>
+            <span style="color: var(--accent-green);">● Online</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content alerts-page">
+        <div class="header">
+            <h1>Alert Review Queue</h1>
+            <div style="color: var(--text-secondary);">
+                Verify or reject pending malpractice flags.
+            </div>
+        </div>
+
+        <!-- Alerts Grid -->
+        <div class="alert-grid" id="alerts-grid">
+            <div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); margin-top: 50px;">
+                <ion-icon name="sync-outline" class="spin"></ion-icon> Loading pending alerts...
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

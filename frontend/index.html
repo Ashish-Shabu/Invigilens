@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvigiLens | Live Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Ionicons for Icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">Invigi<span>Lens</span></div>
+
+        <div class="nav-links">
+            <a href="index.html" class="active">
+                <ion-icon name="videocam-outline" style="margin-right: 10px;"></ion-icon> Live Monitor
+            </a>
+            <a href="alerts.html">
+                <ion-icon name="alert-circle-outline" style="margin-right: 10px;"></ion-icon> Alert Review
+            </a>
+            <a href="#">
+                <ion-icon name="people-outline" style="margin-right: 10px;"></ion-icon> Students
+            </a>
+            <a href="#">
+                <ion-icon name="settings-outline" style="margin-right: 10px;"></ion-icon> Settings
+            </a>
+        </div>
+
+        <div style="margin-top: auto; color: var(--text-secondary); font-size: 0.8rem;">
+            System v1.0 <br>
+            <span style="color: var(--accent-green);">● Online</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header" style="justify-content: space-between; display: flex; align-items: center; padding: 20px;">
+            <h1>Exam Hall #01 - Live Feed</h1>
+
+            <!-- Controls on Right Side -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="btn btn-accept" id="monitor-toggle"
+                    style="background:#334155; display:flex; align-items:center; gap:8px;">
+                    <ion-icon name="play-outline"></ion-icon> Start Monitoring
+                </button>
+                <div class="status-indicator" id="system-status"
+                    style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red);">
+                    <div class="pulse" style="background: red; animation: none;"></div>
+                    System Inactive
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-layout">
+
+
+            <!-- Video Feed Area -->
+            <div class="video-feed-container">
+                <div class="feed-overlay">
+                    <div class="live-dot"></div> LIVE • Camera 01
+                </div>
+                <!-- Placeholder for actual stream. In production, this would be an MJPEG stream IMG or WebRTC video tag -->
+                <img src="https://via.placeholder.com/1280x720/000000/3b82f6?text=Waiting+for+Video+Stream..."
+                    alt="Live Feed" class="video-placeholder" id="live-stream-img">
+            </div>
+
+            <!-- Recent Activity Area -->
+            <div class="activity-feed">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h2 style="font-size: 1.2rem; color: var(--text-primary);">Recent Activity</h2>
+                    <button class="btn btn-reject" onclick="clearActivity()"
+                        style="font-size: 0.8rem; padding: 5px 10px;">
+                        <ion-icon name="trash-outline"></ion-icon> Clear
+                    </button>
+                </div>
+                <div class="feed-list" id="dashboard-feed">
+
+                    <div style="text-align: center; margin-top: 50px; color: var(--text-secondary);">
+                        <ion-icon name="sync-outline" class="spin"></ion-icon> Connecting to server...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+
+</body>
+
+
+</html>
