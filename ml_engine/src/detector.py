@@ -60,7 +60,11 @@ class MalpracticeDetector:
         self.recording_start_time = 0
         self.monitoring_active = False # Default to False as requested
 
+        self.monitoring_active = False # Default to False as requested
+        self.current_max_confidence = 0.0 # Track max confidence during an incident
+
         self.cooldown_frames = 0
+
         
         # Socket.io for Streaming
         self.sio = socketio.Client()
@@ -242,7 +246,37 @@ class MalpracticeDetector:
                     time.sleep(0.1)
                     continue
 
-                # 3. Process (buffer, detect, logic)
+                # --- 2.5 IMPROVED Preprocessing ---
+                # 1. Denoise with Edge Preservation (Bilateral Filter)
+                # Removes grain but keeps text/faces sharp. d=5 is fast enough for real-time.
+                frame = cv2.bilateralFilter(frame, 5, 75, 75)
+
+                # 2. Automatic Brightness & Contrast (Adaptive)
+                # Calculates average brightness and adjusts to target level (approx 127 middle grey)
+                # This handles both Dark Rooms (boosts) and Bright Rooms (diminishes/neutralizes)
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                h, s, v = cv2.split(hsv)
+                mean_brightness = np.mean(v)
+                target_brightness = 120 # Target 'middle' brightness
+                
+                # Calculate correction needed
+                beta = target_brightness - mean_brightness
+                # Clamp the correction to avoid extreme washing out (e.g., max +50 or -30)
+                beta = np.clip(beta, -40, 60)
+                
+                # Apply correction to V (Value/Brightness) channel only
+                v = cv2.add(v, int(beta))
+                final_hsv = cv2.merge((h, s, v))
+                frame = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+                
+                # Mild contrast boost (10%)
+                frame = cv2.convertScaleAbs(frame, alpha=1.1, beta=0)
+
+                # --- End Preprocessing ---
+
+                # --- 3. Process (buffer, detect, logic)
+
+
                 # --- pre-process buffer ---
                 self.sliding_window.append(frame.copy())
                 if len(self.sliding_window) > self.buffer_size:
@@ -255,6 +289,7 @@ class MalpracticeDetector:
                 
                 # --- Logic Engine ---
                 detected_violation = None
+                detected_conf = 0.0
                 
                 # Check for any malpractice class
                 malpractice_classes = ['Using Phone', 'Giving object', 'Giving signal', 'Looking Friend', 'Looking Left', 'Looking Right']
@@ -262,6 +297,7 @@ class MalpracticeDetector:
                 for det in detections:
                     if det['label'] in malpractice_classes:
                         detected_violation = det['label']
+                        detected_conf = det['confidence']
                         break 
                 
                 # State Machine
@@ -269,6 +305,7 @@ class MalpracticeDetector:
                     if detected_violation:
                         self.violation_state = 'RECORDING'
                         self.current_violation_label = detected_violation
+                        self.current_max_confidence = detected_conf
                         self.recording_start_time = time.time()
                         self.violation_frame_buffer = list(self.sliding_window)
                         self.cooldown_frames = 0
@@ -278,6 +315,8 @@ class MalpracticeDetector:
                     self.violation_frame_buffer.append(frame.copy())
                     if detected_violation:
                          self.cooldown_frames = 0
+                         if detected_conf > self.current_max_confidence:
+                             self.current_max_confidence = detected_conf
                     else:
                         self.cooldown_frames += 1
                     
@@ -286,7 +325,7 @@ class MalpracticeDetector:
                         print(f"Violation Ended. Saving clip...")
                         filename = self.save_incident_clip(self.current_violation_label, self.violation_frame_buffer)
                         if filename:
-                            self.send_alert(self.current_violation_label, 0.95, filename)
+                            self.send_alert(self.current_violation_label, self.current_max_confidence, filename)
                         self.violation_state = 'IDLE'
                         self.violation_frame_buffer = []
                         self.current_violation_label = None
