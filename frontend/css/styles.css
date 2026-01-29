@@ -311,8 +311,8 @@ h1 {
 }
 
 .btn {
-    flex: 1;
-    padding: 10px;
+    /* flex: 1;  <-- Removed to stop full width stretching */
+    padding: 10px 16px;
     border: none;
     border-radius: 8px;
     font-family: inherit;

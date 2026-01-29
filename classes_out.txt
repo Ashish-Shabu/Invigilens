@@ -1,0 +1,6 @@
+0: Giving object
+1: Giving signal
+2: Looking Friend
+3: Moving
+4: Normal
+5: Using Phone

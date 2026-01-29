@@ -1,7 +1,7 @@
 import os
 
 # System Configuration
-CONFIDENCE_THRESHOLD = 0.5  # Base threshold for detection
+CONFIDENCE_THRESHOLD = 0.45  # Base threshold for detection
 
 # Model Paths
 MODEL_PATH = os.path.join(os.path.dirname(__file__), '../models/best.pt')

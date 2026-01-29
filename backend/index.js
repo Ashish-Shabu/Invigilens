@@ -3,8 +3,10 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 const cors = require('cors');
+
 const connectDB = require('./config/db');
 const alertRoutes = require('./routes/alertRoutes');
+const studentRoutes = require('./routes/studentRoutes');
 
 // Load env vars
 dotenv.config();
@@ -31,11 +33,15 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // Serve Static Files (Evidence Images)
+// Serve Static Files (Evidence Images)
 app.use('/evidence', express.static('../data/processed'));
-// Maps http://localhost:5000/evidence/filename.jpg -> d:\Inviligens\data\processed\filename.jpg
+app.use('/student-photos', express.static('../data/students'));
 
 // Routes
+// Routes
 app.use('/api/alerts', alertRoutes);
+app.use('/api/students', studentRoutes);
+
 
 
 // Socket.io Connection
