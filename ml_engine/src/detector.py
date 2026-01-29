@@ -44,18 +44,20 @@ class MalpracticeDetector:
 
         # --- STANDARD MODEL FOR PHONE DETECTION ---
         try:
-            self.phone_model = YOLO("yolov8n.pt") 
-            print("Loading Standard YOLOv8n for Phone Backup...")
+            phone_model_path = os.path.join(os.path.dirname(__file__), '../models/invigilens_phone.pt')
+            self.phone_model = YOLO(phone_model_path) 
+            print("Loading Standard for Phone Backup...")
         except Exception as e:
             print(f"Error loading Standard YOLO: {e}")
             self.phone_model = None
 
         # --- YOLO POSE FOR HEAD GAZE ---
         try:
-            self.pose_model = YOLO("yolov8n-pose.pt")
-            print("Loading YOLO-Pose for Head Gaze...")
+            pose_model_path = os.path.join(os.path.dirname(__file__), '../models/invigilens_pose.pt')
+            self.pose_model = YOLO(pose_model_path)
+            print("Loading Pose for Head Gaze...")
         except Exception as e:
-            print("Error loading YOLO-Pose model.")
+            print(f"Error loading YOLO-Pose model: {e}")
             self.pose_model = None
 
         # MediaPipe Face Mesh for Gaze Detection
