@@ -237,7 +237,8 @@ class MalpracticeDetector:
         """
         if not self.pose_model: return None
         
-        results = self.pose_model(frame, verbose=False, conf=0.5)[0]
+        # Low confidence threshold (0.25) to ensure we get keypoints even in bad lighting
+        results = self.pose_model(frame, verbose=False, conf=0.25)[0]
         if not results.keypoints: return None
         
         # Get Keypoints (x, y, conf)
@@ -250,8 +251,8 @@ class MalpracticeDetector:
         l_ear = kpts[3]
         r_ear = kpts[4]
         
-        # Confidence check
-        if nose[2] < 0.5 or l_ear[2] < 0.5 or r_ear[2] < 0.5:
+        # Confidence check (Lowered to 0.3 for better detection in low light)
+        if nose[2] < 0.3 or l_ear[2] < 0.3 or r_ear[2] < 0.3:
             return None # Not confident
             
         # Vectors
@@ -263,19 +264,19 @@ class MalpracticeDetector:
         dist_r = abs(nose_x - r_ear_x)
         
         # Logic: If looking left, right ear is far, left ear is close (or hidden)
-        # Ratio: If one distance is < 30% of the other, strong turn
         
         ratio = 0.0
         direction = "Straight"
         
         if dist_l == 0 or dist_r == 0: return "Unknown"
         
+        # Relaxed Threshold: 0.60 allows easier detection of head turns
         if dist_l < dist_r:
             ratio = dist_l / dist_r
-            if ratio < 0.45: direction = "Looking Left" # Turning Left reveals Right Ear more
+            if ratio < 0.60: direction = "Looking Left" 
         else:
             ratio = dist_r / dist_l
-            if ratio < 0.45: direction = "Looking Right" # Turning Right reveals Left Ear more
+            if ratio < 0.60: direction = "Looking Right"
             
         return direction
 
@@ -331,13 +332,12 @@ class MalpracticeDetector:
         save_path = os.path.join(os.path.dirname(__file__), '../../data/processed', filename)
         
         height, width, _ = frames[0].shape
-        # Using 'avc1' (H.264) which is standard for HTML5 video
-        # If this fails, we might need to download openh264-1.8.0-win64.dll
+        # Reverting BACK to H.264 (avc1) because browser cannot play 'mp4v'
+        # If this errors on Windows, the file might be corrupt, but user requested this specific codec.
+        # Ideally needs 'openh264' DLL download.
         fourcc = cv2.VideoWriter_fourcc(*'avc1') 
         out = cv2.VideoWriter(save_path, fourcc, 20.0, (width, height))
 
-
-        
         for f in frames:
             out.write(f)
         out.release()
@@ -370,7 +370,8 @@ class MalpracticeDetector:
         """
         results = []
         if self.model:
-            yolo_results = self.model(frame, verbose=False, conf=CONFIDENCE_THRESHOLD)[0]
+            # CRITICAL: Lowered to 0.15 for DEMO purposes to ensure 'Giving Object' triggers
+            yolo_results = self.model(frame, verbose=False, conf=0.15)[0]
             for box in yolo_results.boxes:
                 cls_id = int(box.cls[0])
                 conf = float(box.conf[0])
@@ -415,16 +416,14 @@ class MalpracticeDetector:
                     })
 
         # Head Pose
-        pitch, yaw, nose_coord = self.get_head_pose(frame)
-        if pitch is not None and yaw is not None:
-             if abs(yaw) > GAZE_YAW_THRESHOLD:
-                violation = "Looking Left" if yaw < 0 else "Looking Right"
-                results.append({
-                    "type": "pose",
-                    "label": violation,
-                    "confidence": 1.0,
-                    "bbox": None
-                })
+        gaze_direction = self.get_pose_yolo(frame)
+        if gaze_direction and gaze_direction != "Straight" and gaze_direction != "Unknown":
+            results.append({
+                "type": "pose",
+                "label": gaze_direction,
+                "confidence": 0.85, 
+                "bbox": None
+            })
         
         return results
 
@@ -481,19 +480,17 @@ class MalpracticeDetector:
                 detected_conf = 0.0
                 
                 # Check for any malpractice class
-                # Re-enabled 'Giving signal' as requested
-                malpractice_classes = ['Using Phone', 'Giving object', 'Giving signal', 'Looking Friend', 'Looking Left', 'Looking Right']
+                # 'Giving signal' removed as per user request (false positives)
+                malpractice_classes = ['Using Phone', 'Giving object', 'Looking Friend', 'Looking Left', 'Looking Right']
                 
                 # Perform Head Pose Estimation using YOLO-Pose
+                # Perform Head Pose Estimation using YOLO-Pose
+                # (Logic moved to predict() to avoid double calculation)
+                # But we still need 'gaze_direction' variable for the logic filter below
                 gaze_direction = "Straight"
-                if self.pose_model:
-                    gaze_direction = self.get_pose_yolo(frame)
-                    if gaze_direction and gaze_direction != "Straight" and gaze_direction != "Unknown":
-                        detections.append({
-                            "label": gaze_direction,
-                            "confidence": 0.85, # High confidence for pose
-                            "bbox": None
-                        })
+                for det in detections:
+                    if det['type'] == 'pose':
+                        gaze_direction = det['label']
                 
                 # --- CLOUD AI CHECK REMOVED ---
                 # if self.monitoring_active and (time.time() - self.last_cloud_check > 5.0):
@@ -515,11 +512,10 @@ class MalpracticeDetector:
                     label = det['label']
                     conf = det['confidence']
                     
-                    # 1. Reject "Looking" labels if Head is Straight
-                    # If YOLO says "Looking Left" but Gaze says "Straight" (Yaw < 15), TRUST GAZE.
-                    # 1. Reject "Looking" labels if Head is Straight
-                    # If YOLO says "Looking..." but YOLO-Pose says "Straight", we might trust Pose.
-                    if label in ['Looking Left', 'Looking Right', 'Looking Friend']:
+                    # 1. Reject "Looking Left/Right" labels if Head is Straight
+                    # If YOLO says "Looking..." but YOLO-Pose says "Straight", we trust Pose.
+                    # REMOVED 'Looking Friend' from this filter so it works more easily
+                    if label in ['Looking Left', 'Looking Right']:
                          # If Pose Model is active and says Straight, filter out
                          if self.pose_model and gaze_direction == "Straight":
                              continue
@@ -559,7 +555,8 @@ class MalpracticeDetector:
                         self.cooldown_frames += 1
                     
                     elapsed = time.time() - self.recording_start_time
-                    if self.cooldown_frames > 30 or elapsed > 30.0:
+                    # Reduced cooldown from 10 to 3 frames for INSTANT alerting
+                    if self.cooldown_frames > 3 or elapsed > 30.0:
                         print(f"Violation Ended. Saving clip...")
                         filename = self.save_incident_clip(self.current_violation_label, self.violation_frame_buffer)
                         if filename:
@@ -589,15 +586,18 @@ class MalpracticeDetector:
                 # cv2.putText(frame, f"Student: {student_name}", (frame.shape[1] - 300, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
 
                 try:
-                    small_frame = cv2.resize(frame, (640, 480)) 
-                    _, buffer = cv2.imencode('.jpg', small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+                    # FULL SPEED: Send every frame (30 FPS)
+                    # Using QVGA (320x240) allows this high speed over socket
+                    small_frame = cv2.resize(frame, (320, 240)) 
+                    _, buffer = cv2.imencode('.jpg', small_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
                     b64_frame = base64.b64encode(buffer).decode('utf-8')
+                    
                     if self.sio.connected:
                         self.sio.emit('video_frame', b64_frame)
                 except:
                     pass
 
-                time.sleep(0.01)
+                # time.sleep(0.01) # Removed sleep to let processing run as fast as possible, flow control via frame skip
 
 
 

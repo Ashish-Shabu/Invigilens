@@ -62,6 +62,22 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// @desc    Get single alert by ID
+// @route   GET /api/alerts/:id
+// @access  Public
+router.get('/:id', async (req, res) => {
+    try {
+        const alert = await Alert.findById(req.params.id);
+        if (alert) {
+            res.json(alert);
+        } else {
+            res.status(404).json({ message: 'Alert not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 // @desc    Delete ALL alerts (Clear History)
 // @route   DELETE /api/alerts
 router.delete('/', async (req, res) => {
