@@ -83,94 +83,105 @@ fun AlertListScreen(
     val primaryColor = MaterialTheme.colorScheme.primary
     
     Surface(modifier = Modifier.fillMaxSize(), color = Color.White) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            // Header Section - Technical & Monocolour
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        "SYSTEM_STATUS // V1.0",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = primaryColor.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp
-                    )
-                    Text(
-                        "Alerts Feed",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Black,
-                        color = Color.Black
-                    )
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .border(1.dp, primaryColor, RoundedCornerShape(4.dp))
-                        .clickable(enabled = !state.loading) { onRefresh() }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+        LazyColumn(
+            modifier = Modifier.padding(24.dp).fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. Header Section
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        if (state.loading) "SYNCING..." else "REFRESH",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = primaryColor,
-                        letterSpacing = 1.sp
-                    )
+                    Column {
+                        Text(
+                            "SYSTEM_STATUS // V1.0",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = primaryColor.copy(alpha = 0.6f),
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            "Alerts Feed",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black
+                        )
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .border(1.dp, primaryColor, RoundedCornerShape(4.dp))
+                            .clickable(enabled = !state.loading) { onRefresh() }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            if (state.loading) "SYNCING..." else "REFRESH",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = primaryColor,
+                            letterSpacing = 1.sp
+                        )
+                    }
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Status Chips - Monocolour & Technical
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TechnicalBadge(label = "NETWORK", active = state.online)
-                TechnicalBadge(label = "STREAM", active = state.socketConnected)
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (state.error != null) {
-                Text(
-                    "LOG_ERROR: ${state.error}",
-                    color = Color.Red,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .background(Color.Red.copy(alpha = 0.05f))
-                        .border(1.dp, Color.Red.copy(alpha = 0.2f))
-                        .padding(8.dp)
-                        .fillMaxWidth()
-                )
+            // 2. Status Chips
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TechnicalBadge(label = "NETWORK", active = state.online)
+                    TechnicalBadge(label = "STREAM", active = state.socketConnected)
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // High-Contrast Technical List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                items(state.alerts) { alert ->
-                    TechnicalAlertItem(
-                        alert = alert,
-                        onSelect = { onSelect(alert.id) },
-                        onVerify = { onVerify(alert.id) },
-                        onReject = { onReject(alert.id) }
+            // 3. Error Message
+            if (state.error != null) {
+                item {
+                    Text(
+                        "LOG_ERROR: ${state.error}",
+                        color = Color.Red,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(Color.Red.copy(alpha = 0.05f))
+                            .border(1.dp, Color.Red.copy(alpha = 0.2f))
+                            .padding(8.dp)
+                            .fillMaxWidth()
                     )
                 }
             }
 
-            // Detail Panel - HUD Style
-            if (state.selectedAlert != null) {
-                AlertDataPanel(
-                    alert = state.selectedAlert,
-                    loading = state.detailLoading,
-                    onVerify = { state.selectedAlert?.id?.let(onVerify) },
-                    onReject = { state.selectedAlert?.id?.let(onReject) },
-                    onClose = onCloseDetail
+            // 4. Alert List
+            items(state.alerts) { alert ->
+                TechnicalAlertItem(
+                    alert = alert,
+                    onSelect = { onSelect(alert.id) },
+                    onVerify = { onVerify(alert.id) },
+                    onReject = { onReject(alert.id) }
                 )
+            }
+        }
+
+        // Popup Dialog for Evidence
+        if (state.selectedAlert != null) {
+            androidx.compose.ui.window.Dialog(onDismissRequest = onCloseDetail) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White, RoundedCornerShape(4.dp))
+                        .padding(0.dp) 
+                ) {
+                    AlertDataPanel(
+                        alert = state.selectedAlert,
+                        loading = state.detailLoading,
+                        onVerify = { state.selectedAlert?.id?.let(onVerify) },
+                        onReject = { state.selectedAlert?.id?.let(onReject) },
+                        onClose = onCloseDetail
+                    )
+                }
             }
         }
     }
@@ -393,7 +404,7 @@ fun TechnicalVideoPlayer(url: String) {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(url))
             prepare()
-            playWhenReady = false
+            playWhenReady = true
         }
     }
 
@@ -401,6 +412,9 @@ fun TechnicalVideoPlayer(url: String) {
         AndroidView(factory = {
             PlayerView(it).apply {
                 player = exoPlayer
+                useController = true
+                setShowNextButton(false)
+                setShowPreviousButton(false)
             }
         }, modifier = Modifier.fillMaxSize())
     }
